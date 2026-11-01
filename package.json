@@ -1,0 +1,10 @@
+{
+  "name": "quantsynthica-mutual-funds",
+  "private": true,
+  "description": "Root scripts. `npm run dev` starts the database, the API (port 8000) and the website (port 3000).",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "install:all": "node scripts/dev.mjs --setup"
+  },
+  "engines": { "node": ">=20" }
+}

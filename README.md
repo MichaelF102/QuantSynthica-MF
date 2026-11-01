@@ -13,6 +13,9 @@ Quant-first research platform for Indian mutual funds. See `docs/plans/` for the
 | `docs/` | Plans, ADRs, data dictionary, screen→data map, design tokens |
 
 ## Quick start
+One command once installed: `npm run install:all` (first time only), then `npm run dev` from the repo root starts the database, the API (8000) and the website (3000).
+
+Step by step:
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e data_pipeline -e quant_engine -e "backend[dev]"
 make up        # postgres (host port 5433) + redis (6380)
