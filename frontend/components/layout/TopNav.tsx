@@ -114,10 +114,10 @@ export function TopNav() {
   return (
     <header data-print-hide className="sticky top-0 z-50 border-b border-line/80 bg-base/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-[96%] max-w-[1720px] items-center gap-6">
-        <Link href="/overview" className="flex shrink-0 items-center gap-2.5 transition-transform hover:scale-[1.02]" aria-label="QuantSynthica Mutual Funds home">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5 transition-transform hover:scale-[1.02]" aria-label="QuantSynthica Mutual Funds home">
           <QSLogoMark />
           <span className="leading-tight">
-            <span className="block text-base font-bold tracking-tight text-strong">QuantSynthica</span>
+            <span className="block text-[1rem] font-bold tracking-tight text-strong">QuantSynthica</span>
             <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mutual Funds</span>
           </span>
         </Link>

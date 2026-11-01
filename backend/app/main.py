@@ -17,6 +17,7 @@ from app.api import (
     quant,
     reports,
     screener,
+    stats,
 )
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -42,3 +43,4 @@ app.include_router(reports.router)
 app.include_router(account.router)
 app.include_router(assistant.router)
 app.include_router(admin.router)
+app.include_router(stats.router)

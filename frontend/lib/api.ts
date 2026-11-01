@@ -271,6 +271,11 @@ export type AmcDetail = {
   funds: { scheme_id: number; name: string; category: string; composite: number | null; p_score: number | null; ret_3y: number | null }[];
 };
 
+export type PlatformStats = {
+  funds: number | null; fund_houses: number | null; categories: number | null; funds_with_nav_history: number | null; funds_scored: number | null;
+  nav_observations: number | null; history_from: string | null; history_to: string | null; strategies_tested: number; score_version: string;
+};
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -327,6 +332,7 @@ export const api = {
   stress: (holdings: { scheme_id: number; weight: number }[]) => post<StressResult>("/api/v1/portfolio/stress", { holdings }),
   amcs: () => get<AmcRanking>("/api/v1/amcs"),
   amc: (id: number) => get<AmcDetail>(`/api/v1/amcs/${id}`),
+  platformStats: () => get<PlatformStats>("/api/v1/platform-stats"),
   coverage: () => get<Coverage>("/api/v1/data-coverage"),
   fields: () => get<FieldDef[]>("/api/v1/screener/fields"),
   filterOptions: () => get<FilterOptions>("/api/v1/filters/options"),

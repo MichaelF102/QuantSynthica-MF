@@ -543,3 +543,6 @@ The Terminal follows this design system but is built on Next 16 and **Tailwind v
 | Candles (8) | Default bullish `#10b981`, bearish `#f43f5e` (Settings can change them). |
 
 `npm run test:e2e:design` checks every app page at 1280–1920 px and 375 px for horizontal scrolling and the design font, and runs axe-core (WCAG 2.0/2.1 A and AA, contrast included) at 1440 and 375 px and on each analysis-panel tab.
+
+### Pitfall: `text-base` is a colour here
+The theme defines a colour token named `base` (the page background), so Tailwind v4's `text-base` utility resolves to that colour, not to a 16px font size. Using it (or `sm:text-base`) makes text the same colour as the background. Use `text-[1rem]` for 16px.
