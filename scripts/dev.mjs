@@ -34,7 +34,8 @@ else if (run(py, ["-m", "alembic", "upgrade", "head"], join(root, "backend")).st
 const colour = { api: "\x1b[36m", web: "\x1b[35m" };
 const children = [];
 function start(name, cmd, args, cwd) {
-  const p = spawn(cmd, args, { cwd, env: { ...process.env, FORCE_COLOR: "1" }, shell: process.platform === "win32" });
+  // own process group (POSIX) so stopping kills the whole tree: npm -> next, uvicorn reloader -> worker
+  const p = spawn(cmd, args, { cwd, env: { ...process.env, FORCE_COLOR: "1" }, shell: process.platform === "win32", detached: process.platform !== "win32" });
   const out = (s) => String(s).split(/\r?\n/).filter(Boolean).forEach((l) => console.log(`${colour[name]}[${name}]\x1b[0m ${l}`));
   p.stdout.on("data", out);
   p.stderr.on("data", out);
@@ -45,8 +46,11 @@ let stopping = false;
 function stop(code = 0) {
   if (stopping) return;
   stopping = true;
-  children.forEach((c) => { try { c.kill("SIGTERM"); } catch { /* already gone */ } });
-  setTimeout(() => process.exit(code), 500);
+  const kill = (sig) => children.forEach((c) => {
+    try { process.platform === "win32" ? c.kill(sig) : process.kill(-c.pid, sig); } catch { /* already gone */ }
+  });
+  kill("SIGTERM");
+  setTimeout(() => { kill("SIGKILL"); process.exit(code); }, 2000);
 }
 process.on("SIGINT", () => stop(0));
 process.on("SIGTERM", () => stop(0));
