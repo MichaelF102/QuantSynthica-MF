@@ -1,0 +1,42 @@
+name: refresh-data
+# Replaces a Render cron job + disk (both paid). Runs on GitHub's free runners (7 GB RAM): downloads the current data bundle,
+# fetches new NAVs, recomputes metrics and scores against the hosted database, uploads the new bundle and redeploys the API.
+# NOT yet run. Needs these repository secrets: QSMF_DATABASE_URL (the hosted Postgres), RENDER_DEPLOY_HOOK_URL.
+on:
+  schedule:
+    - cron: "30 18 * * 1-5"      # 18:30 UTC = midnight IST, weekdays
+  workflow_dispatch:
+
+permissions:
+  contents: write                # to replace the release asset
+
+concurrency: { group: refresh-data, cancel-in-progress: false }
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      QSMF_DATABASE_URL: ${{ secrets.QSMF_DATABASE_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install "./data_pipeline[parquet]" "./quant_engine[research]" ./backend
+      - name: Download current data bundle
+        run: |
+          QSMF_DATA_URL="https://github.com/${{ github.repository }}/releases/download/data-latest/qsmf-data.tar.gz" QSMF_GITHUB_TOKEN="$GH_TOKEN" scripts/fetch_data.sh
+      - name: Migrate hosted database
+        working-directory: backend
+        run: alembic upgrade head
+      - name: Refresh NAVs, metrics, benchmarks, scores
+        working-directory: backend
+        run: |
+          python -m app.cli.pipeline recent --days 7
+          python -m app.cli.pipeline metrics
+          python -m app.cli.pipeline quant
+      - name: Publish the new data bundle
+        run: scripts/publish_data.sh data-latest
+      - name: Redeploy the API so it picks up the new bundle
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

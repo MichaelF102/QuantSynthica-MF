@@ -1,0 +1,42 @@
+# Render Blueprint for the FREE plan: one web service, no disk, no cron, no Render Postgres.
+#   - Postgres: use a free external database that does not expire (Neon or Supabase) and put its URL in QSMF_DATABASE_URL.
+#     (Render's own free Postgres is deleted after 30 days.)
+#   - Data: no persistent disk, so the NAV store is downloaded into the build from a GitHub release (scripts/fetch_data.sh).
+#   - Refresh: a scheduled GitHub Actions workflow rebuilds the data, uploads a new bundle and triggers a Render deploy.
+# Memory: measured peak about 330 MB under 15 concurrent heavy requests (limit 512 MB). Details in docs/deployment.md.
+# NOT yet applied to a real Render account.
+services:
+  - type: web
+    name: qsmf-api
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install ./data_pipeline[parquet] ./quant_engine ./backend && scripts/fetch_data.sh
+    startCommand: cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: QSMF_ENVIRONMENT
+        value: production
+      - key: QSMF_ENABLE_BACKTESTS
+        value: "false"          # a new backtest needs about 1 GB; stored results are still served
+      # Return freed memory to the OS instead of hoarding it (this alone cut the peak from about 520 MB to about 260 MB):
+      - key: ARROW_DEFAULT_MEMORY_POOL
+        value: system
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: MALLOC_TRIM_THRESHOLD_
+        value: "131072"
+      - key: QSMF_DATABASE_URL
+        sync: false             # from Neon/Supabase
+      - key: QSMF_CORS_ORIGINS
+        sync: false             # JSON list, e.g. ["https://your-app.vercel.app"]
+      - key: QSMF_DATA_URL
+        sync: false             # https://github.com/OWNER/REPO/releases/download/data-latest/qsmf-data.tar.gz
+      - key: QSMF_DATA_SHA256_URL
+        sync: false             # same URL + .sha256 (optional integrity check)
+      - key: QSMF_GITHUB_TOKEN
+        sync: false             # only if the repo is private
+      - key: QSMF_ANTHROPIC_API_KEY
+        sync: false             # optional

@@ -1,0 +1,39 @@
+# deps / builds
+node_modules/
+.next/
+dist/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# data layers (raw CSV under data/raw is tracked; derived layers are not)
+data/bronze/
+data/silver/
+data/gold/
+*.parquet
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# e2e artifacts
+frontend/test-results/
+frontend/playwright-report/
+
+# logs
+*.log
+
+# build metadata and local run artefacts
+*.egg-info/
+*.log
+test-results/
+playwright-report/
+*.tsbuildinfo

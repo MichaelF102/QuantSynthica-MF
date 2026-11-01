@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* QuantSynthica design system (DESIGN.md §4, mapped for Tailwind v4 per §14).
+   Light palette on :root, navy palette on .dark (dark is the primary design target). */
+:root {
+  --qs-base: #fafaf9;
+  --qs-panel: #ffffff;
+  --qs-raised: #f4f4f5;
+  --qs-hover: #f4f4f5;
+  --qs-line: #e4e4e7;
+  --qs-line-strong: #d4d4d8;
+  --qs-strong: #18181b;
+  --qs-fg: #3f3f46;
+  --qs-muted: #52525b;
+  --qs-faint: #71717a;
+  --qs-accent: #2563eb;
+  --qs-up: #16803c;
+  --qs-down: #c62828;
+  --qs-warn: #b45309;
+  --qs-ai: #7c3aed;
+}
+
+.dark {
+  --qs-base: #080d1a;
+  --qs-panel: #0b1222;
+  --qs-raised: #0d1527;
+  --qs-hover: #0e172e;
+  --qs-line: #1e293b;
+  --qs-line-strong: #334155;
+  --qs-strong: #f1f5f9;
+  --qs-fg: #e2e8f0;
+  --qs-muted: #94a3b8;
+  --qs-faint: #8090a6; /* not slate-500: 3.9:1 on navy fails WCAG AA for small text */
+  --qs-accent: #3b82f6;
+  --qs-up: #34d399;
+  --qs-down: #fb7185;
+  --qs-warn: #fbbf24;
+  --qs-ai: #c084fc;
+}
+
+@theme inline {
+  --color-base: var(--qs-base);
+  --color-panel: var(--qs-panel);
+  --color-raised: var(--qs-raised);
+  --color-hover: var(--qs-hover);
+  --color-line: var(--qs-line);
+  --color-line-strong: var(--qs-line-strong);
+  --color-strong: var(--qs-strong);
+  --color-fg: var(--qs-fg);
+  --color-muted: var(--qs-muted);
+  --color-faint: var(--qs-faint);
+  --color-accent: var(--qs-accent);
+  --color-up: var(--qs-up);
+  --color-down: var(--qs-down);
+  --color-warn: var(--qs-warn);
+  --color-ai: var(--qs-ai);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), monospace;
+}
+
+@utility app-container {
+  width: 92%;
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  @media (min-width: 640px) { padding: 0 1.5rem; }
+  @media (min-width: 1024px) { width: 94%; padding: 0 1.75rem; }
+  @media (min-width: 1440px) { width: 92%; padding: 0 2rem; }
+  @media (max-width: 767px) { width: 100%; padding: 0 1rem; }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+body { background: var(--qs-base); color: var(--qs-fg); }
+
+/* Numbers are always mono and right-aligned so columns line up (DESIGN.md §3, §7.7). */
+td.text-right, th.text-right { font-family: var(--font-plex-mono), monospace; }
+th.text-right { font-family: var(--font-inter), system-ui, sans-serif; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--qs-line) var(--qs-base); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--qs-line); }
+::-webkit-scrollbar-track { background: var(--qs-base); }
+
+@media print {
+  :root, .dark { --qs-base: #fff; --qs-panel: #fff; --qs-fg: #111; --qs-strong: #000; --qs-muted: #333; --qs-line: #ccc; }
+  [data-print-hide] { display: none !important; }
+  section { break-inside: avoid; }
+}

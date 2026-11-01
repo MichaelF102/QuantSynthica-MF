@@ -1,0 +1,44 @@
+name: ci
+on:
+  push: { branches: [main, master] }
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: qsmf, POSTGRES_PASSWORD: qsmf, POSTGRES_DB: qsmf }
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U qsmf" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - name: Install
+        run: pip install "./data_pipeline[parquet,dev]" "./quant_engine[dev]" "./backend[dev]"
+      - name: Lint (errors only)
+        run: ruff check backend data_pipeline quant_engine --select E9,F63,F7,F82,F401,F841
+      - name: Financial formula tests (quant engine)
+        run: cd quant_engine && python -m pytest -q
+      - name: Data pipeline and integrity tests
+        run: cd data_pipeline && python -m pytest -q
+      - name: Migration check (upgrade, downgrade, upgrade on the CI database)
+        working-directory: backend
+        run: alembic upgrade head && alembic downgrade base && alembic upgrade head
+      - name: API tests (report-vs-API numbers-match, auth, assistant guardrails)
+        run: cd backend && python -m pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+      - run: npm run build

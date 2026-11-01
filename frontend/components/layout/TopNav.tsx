@@ -1,0 +1,145 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Moon, Sun } from "lucide-react";
+import { QSLogoMark } from "@/components/brand/QSLogoMark";
+import { cn } from "@/lib/utils";
+
+// Navigation per docs/decisions/001-navigation.md. Pages not built yet are visible but disabled.
+type Item = { label: string; href?: string; children?: { label: string; href: string; description: string }[]; tone?: "ai" };
+const ITEMS: Item[] = [
+  { label: "Market Overview", href: "/overview" },
+  {
+    label: "Fund Explorer", href: "/funds",
+    children: [
+      { label: "Fund Explorer", href: "/funds", description: "Browse and open any scheme" },
+      { label: "Comparison", href: "/comparison", description: "Compare up to five schemes" },
+    ],
+  },
+  { label: "Screener", href: "/screener" },
+  { label: "Data Coverage", href: "/coverage" },
+  {
+    label: "Analysis", href: "/performance",
+    children: [
+      { label: "Performance Analytics", href: "/performance", description: "Returns, rolling windows, calendar years, consistency" },
+      { label: "Risk Analytics", href: "/risk", description: "Volatility, drawdown, tail risk, correlation" },
+    ],
+  },
+  {
+    label: "Quant Research Lab", href: "/quant/scoring", tone: "ai",
+    children: [
+      { label: "Fund Scoring", href: "/quant/scoring", description: "QuantSynthica score ranked within peer groups" },
+      { label: "Factor Research", href: "/quant/factors", description: "Do factors predict peer-relative returns?" },
+      { label: "Statistical Analysis", href: "/quant/statistics", description: "Correlations and distributions" },
+      { label: "Fund Clustering", href: "/quant/clustering", description: "K-Means, hierarchical, GMM, DBSCAN, PCA" },
+      { label: "Regime Analysis", href: "/quant/regimes", description: "Bull, bear, sideways and volatility regimes" },
+      { label: "Strategy Backtesting", href: "/quant/backtesting", description: "Test fund-selection rules" },
+    ],
+  },
+  {
+    label: "Portfolios", href: "/portfolio/builder",
+    children: [
+      { label: "Portfolio Builder", href: "/portfolio/builder", description: "Weights, returns, risk, allocation, correlation" },
+      { label: "Optimization", href: "/portfolio/optimization", description: "Min variance, max Sharpe, risk parity, CVaR, frontier" },
+      { label: "SIP / SWP Simulators", href: "/portfolio/sip-swp", description: "Replay plans on real history, or project" },
+      { label: "Rebalancing", href: "/portfolio/rebalancing", description: "Drift, trades and costs" },
+      { label: "Stress Testing", href: "/portfolio/stress-testing", description: "Worst historical falls and market shocks" },
+    ],
+  },
+  { label: "AMC Intelligence", href: "/amc" },
+  { label: "AI Assistant", href: "/assistant", tone: "ai" },
+  { label: "Account", href: "/account" },
+  { label: "Insights" },
+];
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setDark(document.documentElement.classList.contains("dark")), 0);
+    return () => clearTimeout(t);
+  }, []);
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    try { localStorage.setItem("theme", next ? "dark" : "light"); } catch {}
+  };
+  return (
+    <button type="button" onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      className="rounded-lg p-1.5 text-muted transition-colors hover:bg-hover hover:text-strong focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none">
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
+
+function Menu({ item, active }: { item: Item; active: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  return (
+    <div ref={ref} className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
+      onBlur={(e) => { if (!ref.current?.contains(e.relatedTarget as Node)) setOpen(false); }}>
+      <Link href={item.href!} aria-haspopup="menu" aria-expanded={open} aria-current={active ? "page" : undefined}
+        onFocus={() => setOpen(true)}
+        className={cn("relative flex items-center gap-1 px-2 py-4 text-xs font-medium hover:text-strong focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none",
+          active ? (item.tone === "ai" ? "font-semibold text-ai" : "font-semibold text-accent") : (item.tone === "ai" ? "text-ai" : "text-fg"))}>
+        {item.label}<ChevronDown className="h-3 w-3" />
+        {active && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-blue-500" />}
+      </Link>
+      {open && (
+        <div role="menu" className="absolute left-0 top-full z-[60] mt-0 w-72 rounded-xl border border-line bg-raised p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.65)]">
+          {item.children!.map((c) => (
+            <Link key={c.href} href={c.href} role="menuitem" onClick={() => setOpen(false)}
+              className="block rounded-lg px-2.5 py-2 hover:bg-hover focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none">
+              <span className="block text-[12.5px] font-medium text-fg">{c.label}</span>
+              <span className="block text-[11px] text-faint">{c.description}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TopNav() {
+  const path = usePathname();
+  const isActive = (i: Item) =>
+    i.children ? i.children.some((c) => path.startsWith(c.href)) : !!i.href && path.startsWith(i.href);
+  return (
+    <header data-print-hide className="sticky top-0 z-50 border-b border-line/80 bg-base/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 w-[96%] max-w-[1720px] items-center gap-6">
+        <Link href="/overview" className="flex shrink-0 items-center gap-2.5 transition-transform hover:scale-[1.02]" aria-label="QuantSynthica Mutual Funds home">
+          <QSLogoMark />
+          <span className="leading-tight">
+            <span className="block text-base font-bold tracking-tight text-strong">QuantSynthica</span>
+            <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mutual Funds</span>
+          </span>
+        </Link>
+        <nav aria-label="Primary" className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {ITEMS.map((i) =>
+            i.children ? <Menu key={i.label} item={i} active={isActive(i)} /> : i.href ? (
+              <Link key={i.label} href={i.href} aria-current={isActive(i) ? "page" : undefined}
+                className={cn("relative whitespace-nowrap px-2 py-4 text-xs font-medium hover:text-strong focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none",
+                  isActive(i) ? "font-semibold text-accent" : "text-fg")}>
+                {i.label}
+                {isActive(i) && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-blue-500" />}
+              </Link>
+            ) : (
+              <span key={i.label} aria-disabled="true" title="Planned: not built yet"
+                className={cn("cursor-not-allowed whitespace-nowrap px-2 py-4 text-xs font-medium opacity-60", i.tone === "ai" ? "text-ai" : "text-faint")}>
+                {i.label}
+              </span>
+            ),
+          )}
+        </nav>
+        <ThemeToggle />
+      </div>
+    </header>
+  );
+}
