@@ -1,4 +1,28 @@
-# Deployment on free plans: Vercel (frontend) + Render free (API) + free external Postgres
+# Deployment on free plans: Vercel (frontend) + Render free (API) + a free Postgres
+
+## Quick start (about 15 minutes, four free accounts, no paid features)
+You need free accounts on **GitHub**, **Neon** (or Supabase), **Render** and **Vercel**. Four steps, three of them are clicks.
+
+1. **Put the repo on GitHub** (public is simplest) and publish the data once:
+   ```bash
+   gh auth login
+   make deploy-data                  # uploads the 142 MB NAV bundle as release "data-latest"
+   ```
+2. **Create a free Neon database**, copy its connection string, then fill it:
+   ```bash
+   make deploy-db DST='postgresql://user:pass@ep-xxxx.neon.tech/neondb?sslmode=require'
+   ```
+   (needs `pg_dump` and `psql`, and your local database running; takes a minute.)
+3. **Render: New > Blueprint**, pick the repo. It asks for exactly one value: `QSMF_DATABASE_URL` (the Neon string). Everything else, including where to download the data and which websites may call the API, is already in `render.yaml`. When it is live, open `https://<service>.onrender.com/api/v1/health`.
+4. **Vercel: Add New > Project**, pick the repo, set **Root Directory** to `frontend`, add one environment variable `NEXT_PUBLIC_API_URL` = your Render URL, deploy. No CORS step: the API already accepts any `https://*.vercel.app` site.
+
+Optional, both recommended:
+- **Stop the cold starts.** In GitHub: Settings > Secrets and variables > Actions > Variables, add `API_URL` = your Render URL. The `keepalive` workflow then pings it every 10 minutes (one always-on free service fits inside Render's 750 free hours).
+- **Daily data refresh.** Add secrets `QSMF_DATABASE_URL` and `RENDER_DEPLOY_HOOK_URL` (Render service > Settings > Deploy Hook) and the `refresh-data` workflow keeps the NAVs current. Skip it and the site simply shows the data you published in step 1.
+
+Private repo, custom domain or another data host? See "Environment variables" below.
+
+---
 
 **Status: configuration written and tested locally; never applied to real accounts.** Everything below the line "What was measured" was run on this machine; the Render, Vercel, Neon and GitHub Actions steps were not.
 
@@ -32,30 +56,20 @@ Redis is not used. The `/api/v1/admin/refresh` endpoint (for a paid Render disk 
 |---|---|---|
 | `QSMF_ENVIRONMENT=production` | Render | Start-up fails if the DB URL has the dev password or CORS lists localhost. |
 | `QSMF_DATABASE_URL` | Render, GitHub secret | Neon/Supabase connection string. `postgres://` and `postgresql://` are converted automatically. |
-| `QSMF_CORS_ORIGINS` | Render | JSON list with your Vercel URL(s), e.g. `["https://your-app.vercel.app"]`. |
-| `QSMF_DATA_URL` | Render | `https://github.com/OWNER/REPO/releases/download/data-latest/qsmf-data.tar.gz` |
-| `QSMF_DATA_SHA256_URL` | Render | Same URL plus `.sha256` (optional; a mismatch fails the build). |
+| `QSMF_CORS_ORIGINS`, `QSMF_CORS_ORIGIN_REGEX` | Render | Already set in `render.yaml` (`[]` and any `https://*.vercel.app`). Only add your own domain to `QSMF_CORS_ORIGINS` as a JSON list, e.g. `["https://funds.example.com"]`. |
+| `QSMF_DATA_URL` | Render | Optional. Worked out from the repository by default; set it only to download from somewhere else. |
+| `QSMF_DATA_SHA256_URL` | Render | Optional. The `.sha256` next to the bundle is used automatically; a mismatch fails the build. |
 | `QSMF_GITHUB_TOKEN` | Render | Only for a private repo. **Untested**: if the download fails, make the repo public or host the bundle elsewhere (Cloudflare R2 and Backblaze B2 have free tiers). |
 | `QSMF_ENABLE_BACKTESTS=false`, `ARROW_DEFAULT_MEMORY_POOL=system`, `MALLOC_ARENA_MAX=2`, `MALLOC_TRIM_THRESHOLD_=131072` | Render | Already in `render.yaml`. Keep them. |
 | `QSMF_ANTHROPIC_API_KEY` | Render | Optional (assistant paragraph). Never in Vercel. |
 | `NEXT_PUBLIC_API_URL` | Vercel | The Render URL. |
 | `RENDER_DEPLOY_HOOK_URL` | GitHub secret | Render service > Settings > Deploy Hook. |
 
-## Steps (first time)
-1. Push the repo to GitHub (nothing is committed yet). Public is simplest.
-2. Create a free Neon (or Supabase) database. Run migrations and copy the reference data from your local database:
-   ```bash
-   cd backend && QSMF_DATABASE_URL=<neon url> ../.venv/bin/alembic upgrade head
-   SRC=postgresql://qsmf:qsmf@localhost:5433/qsmf DST=<neon url, plain postgresql://> scripts/seed_remote_db.sh
-   ```
-   The script copies every reference and analytics table (not users or saved items) and checks row counts. Rehearsed here against a scratch local database; needs `pg_dump` and `psql` installed.
-3. Publish the data bundle: `gh auth login` then `scripts/publish_data.sh` (creates release `data-latest`).
-4. Render: **New > Blueprint** from the repo; fill the prompted variables. Check `https://<service>.onrender.com/api/v1/health`.
-5. Vercel: import the repo, Root Directory `frontend`, set `NEXT_PUBLIC_API_URL`. Then put the Vercel URL into `QSMF_CORS_ORIGINS` on Render.
-6. GitHub: add secrets `QSMF_DATABASE_URL` and `RENDER_DEPLOY_HOOK_URL`; run the `refresh-data` workflow once by hand and read its log.
+## Steps
+See the quick start at the top. The `make deploy-db` target runs `alembic upgrade head` on the hosted database and then `scripts/seed_remote_db.sh`, which copies every reference and analytics table (not users or saved items) and checks row counts (rehearsed against a scratch local database).
 
 ## Known limits of the free setup
-- **Cold starts.** The API sleeps when idle; the first request waits while it starts. A free uptime pinger avoids this but uses your 750 free hours.
+- **Cold starts.** The API sleeps after 15 idle minutes and takes 30 to 60 s to wake. The optional `keepalive` workflow (a GitHub Actions ping every 10 minutes) avoids this and fits inside the 750 free hours for one service. The landing page shows dashes instead of waiting more than 8 s for its statistics.
 - **The refresh pipeline has never run against a hosted database or on GitHub's runners.** Treat the first runs as testing. A failed workflow run leaves the old data in place (the bundle is only uploaded at the end).
 - **New backtests are unavailable online** (stored results work). Run them locally.
 - **Sessions and saved items** live in the hosted Postgres; free tiers have connection and storage limits and Neon pauses when idle (the first query after a pause is slow).

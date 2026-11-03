@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://qsmf:qsmf@localhost:5433/qsmf"
     redis_url: str = "redis://localhost:6380/0"
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Optional pattern for allowed origins, e.g. ^https://[a-z0-9-]+\.vercel\.app$ so a Vercel deployment (and its previews) need no CORS setup.
+    # Safe because sign-in uses a bearer token the page itself holds, not a cookie, so another origin cannot borrow a visitor's session.
+    cors_origin_regex: str | None = None
     log_level: str = "INFO"
     environment: str = "development"
     # New backtests load the whole NAV universe (about 1 GB). Switch off on small hosts; stored results are still served.

@@ -116,3 +116,20 @@ def test_hosted_postgres_urls_are_normalised_for_the_psycopg_driver():
     for raw in ("postgres://u:p@h:5432/d", "postgresql://u:p@h:5432/d"):
         assert Settings(database_url=raw, _env_file=None).database_url == "postgresql+psycopg://u:p@h:5432/d"
     assert Settings(database_url="postgresql+psycopg://u:p@h/d", _env_file=None).database_url == "postgresql+psycopg://u:p@h/d"
+
+
+def test_cors_origin_regex_allows_vercel_deployments_only(client):
+    from app.core.config import Settings
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.testclient import TestClient
+
+    st = Settings(environment="production", database_url="postgresql+psycopg://u:p@db/x", cors_origins=[], cors_origin_regex=r"^https://[a-z0-9-]+\.vercel\.app$", _env_file=None)
+    app = FastAPI()
+    app.add_middleware(CORSMiddleware, allow_origins=st.cors_origins, allow_origin_regex=st.cors_origin_regex, allow_methods=["GET"])
+    app.get("/x")(lambda: {})
+    c = TestClient(app)
+    ok = c.get("/x", headers={"Origin": "https://qsmf-abc-123.vercel.app"})
+    bad = c.get("/x", headers={"Origin": "https://evil.example.com"})
+    assert ok.headers.get("access-control-allow-origin") == "https://qsmf-abc-123.vercel.app"
+    assert "access-control-allow-origin" not in bad.headers

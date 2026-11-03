@@ -28,7 +28,7 @@ log = logging.getLogger("qsmf")
 
 app = FastAPI(title="QuantSynthica Mutual Funds API", version="0.1.0")
 app.add_middleware(
-    CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["*"],
+    CORSMiddleware, allow_origins=settings.cors_origins, allow_origin_regex=settings.cors_origin_regex, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["*"],
 )
 app.include_router(health.router)
 app.include_router(funds.router)
