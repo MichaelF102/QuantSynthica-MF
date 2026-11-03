@@ -648,6 +648,16 @@
     .kf-prog { display: none; }
     .kf-v { font-size: clamp(84px, 22vw, 140px); }
   }
+  @media (max-width: 560px) {
+    .wrap { width: calc(100% - 32px); }
+    .nav-inner { gap: 10px; }
+    .nav-right { gap: 6px; }
+    .nav-right .btn { display: none; }
+    .brand { gap: 8px; min-width: 0; }
+    .brand-name { font-size: 14px; }
+    .burger { padding: 10px; }
+    .mobile-menu .mm-launch { color: var(--accent); font-weight: 600; }
+  }
   @media (max-width: 680px) {
     section { padding: 88px 0; }
     .eco, .pipe { grid-template-columns: 1fr; }

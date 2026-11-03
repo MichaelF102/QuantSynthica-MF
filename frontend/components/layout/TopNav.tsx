@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Moon, Sun } from "lucide-react";
+import { ChevronDown, Menu as MenuIcon, Moon, Sun, X } from "lucide-react";
 import { QSLogoMark } from "@/components/brand/QSLogoMark";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +67,7 @@ function ThemeToggle() {
   };
   return (
     <button type="button" onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-      className="rounded-lg p-1.5 text-muted transition-colors hover:bg-hover hover:text-strong focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none">
+      className="rounded-lg p-2 text-muted transition-colors hover:bg-hover hover:text-strong focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none">
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
   );
@@ -106,13 +106,60 @@ function Menu({ item, active }: { item: Item; active: boolean }) {
   );
 }
 
+/** Phone/tablet navigation: a full-height drawer with every item, groups expanded (hover menus do not work on touch). */
+function MobileDrawer({ path, isActive, onClose }: { path: string; isActive: (i: Item) => boolean; onClose: () => void }) {
+  const focus = "focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none";
+  return (
+    <nav id="mobile-nav" aria-label="Primary (mobile)" data-print-hide
+      className="absolute inset-x-0 top-full z-40 h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-line bg-base px-4 pb-10 pt-3 xl:hidden">
+      <ul className="mx-auto max-w-xl space-y-1">
+        {ITEMS.map((i) => (
+          <li key={i.label}>
+            {i.href && (
+              <Link href={i.href} onClick={onClose} aria-current={isActive(i) && !i.children ? "page" : undefined}
+                className={cn("flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-hover", focus,
+                  i.children ? "text-[11px] font-semibold uppercase tracking-wider" : "font-medium",
+                  i.tone === "ai" ? "text-ai" : isActive(i) ? "text-accent" : i.children ? "text-muted" : "text-fg")}>
+                {i.label}
+              </Link>
+            )}
+            {i.children && (
+              <ul className="mb-2 ml-3 space-y-0.5 border-l border-line pl-2">
+                {i.children.map((c) => (
+                  <li key={c.href}>
+                    <Link href={c.href} onClick={onClose} aria-current={path.startsWith(c.href) ? "page" : undefined}
+                      className={cn("block rounded-lg px-3 py-2 hover:bg-hover", focus)}>
+                      <span className={cn("block text-[13px] font-medium", path.startsWith(c.href) ? "text-accent" : "text-fg")}>{c.label}</span>
+                      <span className="block text-[11px] text-faint">{c.description}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 export function TopNav() {
   const path = usePathname();
+  const [open, setOpen] = useState(false);
+  // close the drawer on navigation; state is adjusted during render (not in an effect) to avoid a cascading update
+  const [lastPath, setLastPath] = useState(path);
+  if (lastPath !== path) { setLastPath(path); setOpen(false); }
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = ""; document.removeEventListener("keydown", onKey); };
+  }, [open]);
   const isActive = (i: Item) =>
     i.children ? i.children.some((c) => path.startsWith(c.href)) : !!i.href && path.startsWith(i.href);
   return (
     <header data-print-hide className="sticky top-0 z-50 border-b border-line/80 bg-base/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 w-[96%] max-w-[1720px] items-center gap-6">
+      <div className="mx-auto flex h-16 w-[96%] max-w-[1720px] items-center gap-3 sm:gap-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5 transition-transform hover:scale-[1.02]" aria-label="QuantSynthica Mutual Funds home">
           <QSLogoMark />
           <span className="leading-tight">
@@ -120,7 +167,7 @@ export function TopNav() {
             <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mutual Funds</span>
           </span>
         </Link>
-        <nav aria-label="Primary" className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        <nav aria-label="Primary" className="no-scrollbar hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto xl:flex">
           {ITEMS.map((i) =>
             i.children ? <Menu key={i.label} item={i} active={isActive(i)} /> : i.href ? (
               <Link key={i.label} href={i.href} aria-current={isActive(i) ? "page" : undefined}
@@ -137,8 +184,15 @@ export function TopNav() {
             ),
           )}
         </nav>
-        <ThemeToggle />
+        <div className="ml-auto flex items-center gap-1 xl:ml-0">
+          <ThemeToggle />
+          <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="mobile-nav" aria-label={open ? "Close menu" : "Open menu"}
+            className="rounded-lg p-2 text-muted hover:bg-hover hover:text-strong focus-visible:ring-1 focus-visible:ring-accent/70 focus-visible:outline-none xl:hidden">
+            {open ? <X className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
+      {open && <MobileDrawer path={path} isActive={isActive} onClose={() => setOpen(false)} />}
     </header>
   );
 }

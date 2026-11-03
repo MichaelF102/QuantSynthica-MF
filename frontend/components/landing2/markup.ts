@@ -69,6 +69,7 @@ export function buildMarkup(s: PlatformStats | null): string {
   <a href="#regimes">Regimes</a>
   <a href="#assistant">AI assistant</a>
   <a href="#methodology">Methodology</a>
+  <a href="/overview" class="mm-launch">Launch platform</a>
 </nav>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
