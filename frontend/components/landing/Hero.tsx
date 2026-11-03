@@ -1,17 +1,40 @@
-import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+"use client";
 
-/** Hero: the one-line promise, two ways in, and an honest one-line scope statement. */
+import Link from "next/link";
+import { useRef } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight, ShieldCheck } from "lucide-react";
+import GlowHorizonFM from "@/components/ui/glow-horizon";
+
+/**
+ * Hero: the one-line promise, two ways in, and an honest one-line scope statement.
+ * The hero is always dark (the glow needs a dark ground), so it carries its own `dark` token scope.
+ * While scrolling past it, each layer moves at a different speed (parallax): the glow drifts slowest,
+ * the grid a little faster, the copy fastest and fades out.
+ */
 export function Hero() {
+  const ref = useRef<HTMLElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+
+  const glowY = useTransform(scrollYProgress, [0, 1], ["0%", reduce ? "0%" : "22%"]);
+  const glowScale = useTransform(scrollYProgress, [0, 1], [1, reduce ? 1 : 1.12]);
+  const gridY = useTransform(scrollYProgress, [0, 1], ["0%", reduce ? "0%" : "38%"]);
+  const copyY = useTransform(scrollYProgress, [0, 1], ["0%", reduce ? "0%" : "-18%"]);
+  const copyOpacity = useTransform(scrollYProgress, [0, 0.75], [1, reduce ? 1 : 0]);
+
   return (
-    <section aria-labelledby="hero-title" className="relative isolate overflow-hidden border-b border-line/60">
+    <section ref={ref} aria-labelledby="hero-title" className="dark relative isolate overflow-hidden border-b border-line/60 bg-[#050507]">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/4 top-0 h-72 w-[28rem] rounded-full bg-blue-600/15 blur-3xl" />
-        <div className="absolute right-1/4 top-10 h-72 w-[28rem] rounded-full bg-indigo-600/15 blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(var(--qs-fg) 1px, transparent 1px), linear-gradient(90deg, var(--qs-fg) 1px, transparent 1px)", backgroundSize: "56px 56px", maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)" }} />
+        <motion.div className="absolute inset-0" style={{ y: gridY }}>
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(var(--qs-fg) 1px, transparent 1px), linear-gradient(90deg, var(--qs-fg) 1px, transparent 1px)", backgroundSize: "56px 56px", maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)" }} />
+        </motion.div>
+        <motion.div className="absolute inset-0" style={{ y: glowY, scale: glowScale }}>
+          <GlowHorizonFM variant="top" />
+        </motion.div>
       </div>
-      <div className="app-container flex flex-col items-center py-20 text-center sm:py-28">
-        <p className="rounded-full border border-line bg-panel/70 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted">Quantitative research for Indian mutual funds</p>
+      <motion.div style={{ y: copyY, opacity: copyOpacity }} className="app-container flex min-h-[calc(100svh-4rem)] flex-col items-center justify-center py-20 text-center sm:py-28">
+        <p className="rounded-full border border-line bg-panel/70 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted backdrop-blur">Quantitative research for Indian mutual funds</p>
         <h1 id="hero-title" className="mt-6 max-w-4xl text-4xl font-extrabold tracking-tight text-strong sm:text-6xl">
           Beyond Returns.{" "}
           <span className="block bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">Into Intelligence.</span>
@@ -29,7 +52,7 @@ export function Hero() {
           </a>
         </div>
         <p className="mt-6 text-[11px] text-faint">A research tool, not investment advice. Past performance does not indicate future results.</p>
-      </div>
+      </motion.div>
     </section>
   );
 }

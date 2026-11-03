@@ -90,3 +90,41 @@ th.text-right { font-family: var(--font-inter), system-ui, sans-serif; }
   [data-print-hide] { display: none !important; }
   section { break-inside: avoid; }
 }
+
+/* ---- Bento cards (components/ui/bento.tsx): hover rim, cursor spotlight, flash, shared keyframes ---- */
+@property --qs-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.qs-card { --c: var(--qs-accent); position: relative; isolation: isolate; transition: box-shadow .4s, border-color .4s; }
+.qs-card[data-tone="ai"] { --c: var(--qs-ai); }
+.qs-card::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: conic-gradient(from var(--qs-angle), transparent 0 280deg, var(--c) 320deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0; transition: opacity .4s; animation: qs-spin 4s linear infinite; animation-play-state: paused;
+}
+.qs-card:hover::before { opacity: 1; animation-play-state: running; }
+.qs-card::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--c) 14%, transparent), transparent 60%);
+  opacity: 0; transition: opacity .3s;
+}
+.qs-card:hover::after { opacity: 1; }
+.qs-card:hover { box-shadow: 0 24px 60px -28px color-mix(in srgb, var(--c) 50%, transparent); }
+.qs-card.qs-flash { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 40px -8px color-mix(in srgb, var(--c) 60%, transparent); }
+@keyframes qs-spin { to { --qs-angle: 360deg; } }
+@keyframes qs-travel { from { left: 6%; } to { left: 94%; } }
+@keyframes qs-shimmer { to { transform: translateX(100%); } }
+@keyframes qs-float { 50% { translate: 0 -6px; } }
+@keyframes qs-beat { 50% { transform: scale(1.7); } }
+@keyframes qs-blink { 50% { opacity: 0; } }
+.qs-shimmer::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation: qs-shimmer 2.4s ease-in-out infinite; }
+.qs-float { animation: qs-float 5s ease-in-out infinite; }
+.qs-caret::after { content: "\2590"; margin-left: 2px; color: var(--qs-ai); animation: qs-blink 1s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .qs-card::before, .qs-shimmer::after, .qs-float, .qs-caret::after, .qs-travel { animation: none !important; }
+}
+
+/* QS logo: show the artwork that suits the active theme (components/brand/QSLogoMark.tsx) */
+.qs-logo-dark { display: none; }
+.dark .qs-logo-light { display: none; }
+.dark .qs-logo-dark { display: block; }

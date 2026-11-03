@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, BarChart3, Building2, FlaskConical, GitCompare, Layers, ListFilter, ShieldAlert, Sparkles, Table2, Wallet } from "lucide-react";
+import { Reveal } from "@/components/ui/reveal";
 import { SectionShell } from "./SectionShell";
 
 const AREAS = [
@@ -20,16 +21,18 @@ export function ExplorePlatform() {
   return (
     <SectionShell id="explore" eyebrow="Explore the platform" title="Everything is" accent="one click away" lead="Every card opens a working page, not a mock-up.">
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {AREAS.map((a) => (
+        {AREAS.map((a, i) => (
           <li key={a.href}>
-            <Link href={a.href} className="group flex h-full flex-col rounded-xl border border-line bg-panel/95 p-4 shadow-lg shadow-black/20 transition-colors hover:border-line-strong hover:bg-hover focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:outline-none">
-              <div className="mb-3 flex items-center justify-between">
-                <span className={`inline-flex rounded-lg p-1.5 ${a.ai ? "bg-purple-500/10 text-ai" : "bg-blue-500/10 text-accent"}`}><a.icon className="h-4 w-4" /></span>
-                <ArrowUpRight aria-hidden className="h-4 w-4 text-faint transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-strong" />
-              </div>
-              <h3 className="text-sm font-bold text-strong">{a.title}</h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{a.text}</p>
-            </Link>
+            <Reveal delay={(i % 5) * 0.05} className="h-full">
+              <Link href={a.href} className="group flex h-full flex-col rounded-xl border border-line bg-panel p-4 transition-colors duration-200 hover:border-line-strong hover:bg-raised focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:outline-none">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className={`inline-flex rounded-md border border-line bg-raised p-1.5 text-muted transition-colors duration-200 ${a.ai ? "group-hover:border-purple-500/40 group-hover:text-ai" : "group-hover:border-blue-500/40 group-hover:text-accent"}`}><a.icon className="h-4 w-4" /></span>
+                  <ArrowUpRight aria-hidden className="h-4 w-4 text-faint transition-all duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-strong" />
+                </div>
+                <h3 className="text-sm font-semibold text-strong">{a.title}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted">{a.text}</p>
+              </Link>
+            </Reveal>
           </li>
         ))}
       </ul>

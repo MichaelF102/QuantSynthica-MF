@@ -51,7 +51,6 @@ const ITEMS: Item[] = [
   { label: "AMC Intelligence", href: "/amc" },
   { label: "AI Assistant", href: "/assistant", tone: "ai" },
   { label: "Account", href: "/account" },
-  { label: "Insights" },
 ];
 
 function ThemeToggle() {

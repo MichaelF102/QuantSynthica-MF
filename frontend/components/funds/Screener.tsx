@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Condition, type FieldDef, type FilterOptions, type Group, type ScreenResult } from "@/lib/api";
-import { Search, Save, Download, Plus, GitCompareArrows } from "lucide-react";
+import { Search, Save, Download, Plus, GitCompareArrows, ChevronDown } from "lucide-react";
 import { Banner, EmptyState, PageHeader, Panel, btnPrimary, btnSecondary, inputCls } from "@/components/ui/ui";
 import { cn } from "@/lib/utils";
 import { crore, dash, fmtPrice, pct, tone } from "@/lib/format";
@@ -11,15 +11,18 @@ import { crore, dash, fmtPrice, pct, tone } from "@/lib/format";
 export type Row = { id: string; field: string; op: string; value: string; value2: string; multi: string[] };
 export type ScreenState = {
   tab: string; logic: "and" | "or"; rows: Row[]; sort: string; order: "asc" | "desc"; page: number; pageSize: number;
+  /** Quick filters: fund houses, plan (Direct / Regular) and option (Growth / IDCW), each matching any of the picked values. */
+  amcs: string[]; cats: string[]; plans: string[]; opts: string[];
 };
 
-const TABS: { key: string; label: string; preset: Condition[]; gated?: string }[] = [
+const TABS: { key: string; label: string; preset: Condition[]; note?: string; sort?: [string, "asc" | "desc"] }[] = [
   { key: "all", label: "All Funds", preset: [] },
   { key: "equity", label: "Equity", preset: [{ field: "asset_tier", op: "eq", value: "Equity" }] },
   { key: "debt", label: "Debt", preset: [{ field: "asset_tier", op: "eq", value: "Debt" }] },
   { key: "hybrid", label: "Hybrid", preset: [{ field: "asset_tier", op: "eq", value: "Hybrid" }] },
   { key: "elss", label: "ELSS (Tax saving)", preset: [{ field: "category", op: "eq", value: "ELSS (Tax Savings)" }] },
-  { key: "quant", label: "Quant Screener", preset: [], gated: "The QuantSynthica score arrives in Phase 5. NAV-derived filters (Sharpe, drawdown, volatility, beta, peer percentiles) are available in the condition builder now." },
+  { key: "quant", label: "Quant Screener", preset: [{ field: "quant_score", op: "not_null" }], sort: ["quant_score", "desc"],
+    note: "Funds that have a QuantSynthica score, highest first. The score is peer-relative and is a research indicator, not a prediction. Add Sharpe, drawdown, volatility or percentile conditions below to narrow the list." },
 ];
 
 const OP_LABEL: Record<string, string> = {
@@ -30,7 +33,8 @@ const IDCW_FREQ = ["Daily", "Weekly", "Monthly", "Quarterly", "Annual"];
 const OPTION_KEY: Record<string, keyof FilterOptions> = {
   amc: "amcs", category: "categories", asset_tier: "asset_tiers", plan_type: "plan_types", option_type: "option_types",
 };
-const DEFAULT: ScreenState = { tab: "all", logic: "and", rows: [], sort: "name", order: "asc", page: 1, pageSize: 50 };
+const DEFAULT: ScreenState = { tab: "all", logic: "and", rows: [], sort: "name", order: "asc", page: 1, pageSize: 50, amcs: [], cats: [], plans: [], opts: [] };
+const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 const MAX_COMPARE = 5;
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -67,6 +71,7 @@ export function Screener({ fields, options, initial }: { fields: FieldDef[]; opt
 
   const [state, setState] = useState<ScreenState>(() => ({
     ...DEFAULT, ...initial,
+    amcs: strs(initial?.amcs), cats: strs(initial?.cats), plans: strs(initial?.plans), opts: strs(initial?.opts),
     rows: (initial?.rows ?? []).filter((r) => r && typeof r.field === "string").map((r) => ({ ...r, id: r.id ?? uid(), multi: r.multi ?? [], value2: r.value2 ?? "" })),
   }));
   const [result, setResult] = useState<ScreenResult | null>(null);
@@ -83,9 +88,13 @@ export function Screener({ fields, options, initial }: { fields: FieldDef[]; opt
 
   const request = useMemo(() => {
     const items: (Condition | Group)[] = [...tab.preset];
+    if (state.amcs.length) items.push({ field: "amc", op: "in", value: state.amcs });
+    if (state.cats.length) items.push({ field: "category", op: "in", value: state.cats });
+    if (state.plans.length) items.push({ field: "plan_type", op: "in", value: state.plans });
+    if (state.opts.length) items.push({ field: "option_type", op: "in", value: state.opts });
     if (userConds.length) items.push({ op: state.logic, items: userConds });
     return { filter: { op: "and", items } as Group, sort: state.sort, order: state.order, page: state.page, page_size: state.pageSize };
-  }, [tab, userConds, state.logic, state.sort, state.order, state.page, state.pageSize]);
+  }, [tab, userConds, state.logic, state.sort, state.order, state.page, state.pageSize, state.amcs, state.cats, state.plans, state.opts]);
 
   // load saved screens
   useEffect(() => {
@@ -185,16 +194,39 @@ export function Screener({ fields, options, initial }: { fields: FieldDef[]; opt
       <div className="no-scrollbar w-full overflow-x-auto py-2">
         <nav aria-label="Screens" className="flex min-w-max items-center gap-1.5 rounded-xl border border-line bg-raised/80 p-1 backdrop-blur-md">
           {TABS.map((t) => (
-            <button key={t.key} onClick={() => patch({ tab: t.key })} aria-current={state.tab === t.key ? "page" : undefined}
+            <button key={t.key} onClick={() => patch({ tab: t.key, ...(t.sort ? { sort: t.sort[0], order: t.sort[1] } : {}) })} aria-current={state.tab === t.key ? "page" : undefined}
               className={cn("rounded-lg px-3.5 py-2 text-xs", state.tab === t.key ? "bg-blue-600 font-semibold text-white shadow-lg shadow-blue-600/30" : "font-medium text-muted hover:bg-hover hover:text-strong")}>
               {t.label}
             </button>
           ))}
         </nav>
       </div>
-      {tab.gated && <Banner tone="warn">{tab.gated}</Banner>}
+      {tab.note && <Banner tone="accent">{tab.note}</Banner>}
 
       <Panel>
+        <div className="mb-4 space-y-3 border-b border-line pb-4 text-xs">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Fund house</span>
+              <MultiPicker noun="fund houses" options={options.amcs} value={state.amcs} onChange={(amcs) => patch({ amcs })} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Category</span>
+              <MultiPicker noun="categories" options={options.categories} value={state.cats} onChange={(cats) => patch({ cats })} />
+            </div>
+            <ChipGroup label="Plan" options={options.plan_types.map((o) => o.value)} value={state.plans} onChange={(plans) => patch({ plans })} />
+            <ChipGroup label="Option" options={options.option_types.map((o) => o.value)} value={state.opts} onChange={(opts) => patch({ opts })} />
+            {(state.amcs.length > 0 || state.cats.length > 0 || state.plans.length > 0 || state.opts.length > 0) && (
+              <button onClick={() => patch({ amcs: [], cats: [], plans: [], opts: [] })} className="text-[11px] font-medium text-accent hover:underline">Clear quick filters</button>
+            )}
+          </div>
+          {(state.amcs.length > 0 || state.cats.length > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {state.amcs.map((a) => <PickedChip key={`a${a}`} label={a} onRemove={() => patch({ amcs: state.amcs.filter((x) => x !== a) })} />)}
+              {state.cats.map((c) => <PickedChip key={`c${c}`} label={c} onRemove={() => patch({ cats: state.cats.filter((x) => x !== c) })} />)}
+            </div>
+          )}
+        </div>
         <div className="mb-3 flex flex-wrap items-center gap-3 text-xs">
           <span className="font-medium">Conditions</span>
           <span className="text-muted">Match</span>
@@ -349,5 +381,83 @@ export function Screener({ fields, options, initial }: { fields: FieldDef[]; opt
         </div>
       </div>
     </div>
+  );
+}
+
+/** Toggle chips for a small set of values (plan: Direct / Regular, option: Growth / IDCW). Picking none means "any". */
+const CHIP_LABEL: Record<string, string> = { Unspecified: "Not stated", Institutional: "Institutional plan" };
+/** Main values first (Direct, Regular, Growth, IDCW), then the rest, so the common choices stay where you expect them. */
+const CHIP_FIRST = ["Direct", "Regular", "Growth", "IDCW"];
+const chipOrder = (o: string[]) => [...o].sort((a, b) => (CHIP_FIRST.indexOf(a) + 1 || 99) - (CHIP_FIRST.indexOf(b) + 1 || 99));
+
+function ChipGroup({ label, options, value, onChange }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+  return (
+    <div className="flex items-center gap-2" role="group" aria-label={label}>
+      <span className="font-medium">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {chipOrder(options).map((o) => {
+          const on = value.includes(o);
+          return (
+            <button key={o} type="button" aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== o) : [...value, o])}
+              className={cn("rounded-full border px-3 py-1 text-[11px] font-medium transition-colors", on ? "border-blue-500/60 bg-blue-500/15 text-accent" : "border-line bg-raised text-muted hover:border-line-strong hover:text-strong")}>
+              {CHIP_LABEL[o] ?? o}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Searchable multi-select (fund houses, categories). */
+function MultiPicker({ noun, options, value, onChange }: { noun: string; options: { value: string; count: number }[]; value: string[]; onChange: (v: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  const shown = options.filter((o) => o.value.toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <div ref={box} className="relative">
+      <button type="button" aria-expanded={open} aria-haspopup="listbox" onClick={() => setOpen((v) => !v)} className={cn(inputCls, "flex items-center gap-2")}>
+        {value.length ? `${value.length} selected` : `All ${noun}`}
+        <ChevronDown className="h-3.5 w-3.5 text-muted" />
+      </button>
+      {open && (
+        <div className="absolute left-0 z-30 mt-1 w-80 rounded-lg border border-line bg-panel p-2 shadow-xl shadow-black/40">
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${noun}`} aria-label={`Search ${noun}`} className={cn(inputCls, "mb-2 w-full")} />
+          <ul role="listbox" aria-multiselectable className="max-h-64 overflow-y-auto">
+            {shown.map((o) => {
+              const on = value.includes(o.value);
+              return (
+                <li key={o.value} role="option" aria-selected={on}>
+                  <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-hover">
+                    <input type="checkbox" checked={on} onChange={() => onChange(on ? value.filter((x) => x !== o.value) : [...value, o.value])} />
+                    <span className="flex-1 truncate">{o.value}</span>
+                    <span className="font-mono text-[10px] text-faint">{o.count.toLocaleString("en-IN")}</span>
+                  </label>
+                </li>
+              );
+            })}
+            {shown.length === 0 && <li className="px-2 py-3 text-muted">No match.</li>}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PickedChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-raised px-3 py-1 text-[11px] text-fg">
+      {label}
+      <button onClick={onRemove} className="text-muted hover:text-down" aria-label={`Remove ${label}`}>✕</button>
+    </span>
   );
 }

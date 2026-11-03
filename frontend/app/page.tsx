@@ -1,18 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AIAssistantSection } from "@/components/landing/AIAssistantSection";
-import { Ecosystem } from "@/components/landing/Ecosystem";
-import { ExplorePlatform } from "@/components/landing/ExplorePlatform";
-import { FinalCTA } from "@/components/landing/FinalCTA";
-import { Hero } from "@/components/landing/Hero";
-import { LandingFooter } from "@/components/landing/LandingFooter";
-import { LandingNav } from "@/components/landing/LandingNav";
-import { MarketRegimeSection, MarketRegimeSkeleton } from "@/components/landing/MarketRegimeSection";
-import { MethodologySection } from "@/components/landing/MethodologySection";
-import { PlatformStats, PlatformStatsSkeleton } from "@/components/landing/PlatformStats";
-import { PortfolioEngineeringSection } from "@/components/landing/PortfolioEngineeringSection";
-import { QuantEngineSection, QuantEngineSkeleton } from "@/components/landing/QuantEngineSection";
-import { RiskPerformanceSection } from "@/components/landing/RiskPerformanceSection";
+import { Landing } from "@/components/landing2/Landing";
+import { api, type PlatformStats } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "QuantSynthica Mutual Funds: Beyond Returns. Into Intelligence.",
@@ -20,24 +9,14 @@ export const metadata: Metadata = {
 };
 
 /** Landing page: the entry point. The research platform itself lives under /overview and the routes in the (platform) group. */
-export default function Landing() {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <LandingNav />
-      <main className="flex-1">
-        <Hero />
-        <Suspense fallback={<PlatformStatsSkeleton />}><PlatformStats /></Suspense>
-        <Ecosystem />
-        <ExplorePlatform />
-        <Suspense fallback={<QuantEngineSkeleton />}><QuantEngineSection /></Suspense>
-        <RiskPerformanceSection />
-        <PortfolioEngineeringSection />
-        <Suspense fallback={<MarketRegimeSkeleton />}><MarketRegimeSection /></Suspense>
-        <AIAssistantSection />
-        <MethodologySection />
-        <FinalCTA />
-      </main>
-      <LandingFooter />
-    </div>
-  );
+async function LandingWithStats() {
+  let stats: PlatformStats | null = null;
+  // A sleeping free-tier API can take a minute to wake; show dashes after 8 s instead of holding the page.
+  try { stats = await Promise.race([api.platformStats(), new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))]); } catch { stats = null; }
+  return <Landing stats={stats} />;
+}
+
+export default function Home() {
+  // The statistics come from the API at request time; until they arrive the page shows an empty dark canvas (no placeholder figures).
+  return <Suspense fallback={<div aria-hidden className="min-h-screen bg-[#07090c]" />}><LandingWithStats /></Suspense>;
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WatchButton } from "@/components/WatchButton";
 import { ReportButtons } from "@/components/ReportButtons";
-import { Banner, PageHeader, PillTabs, Panel, SegmentedLinks, StatTile, btnSecondary } from "@/components/ui/ui";
+import { Banner, PageHeader, PillTabs, Panel, SegmentedLinks, StatTile, btnPrimary, btnSecondary } from "@/components/ui/ui";
 import {
   BenchmarkTable, CalendarPanel, CumulativeChart, DataIssues, DrawdownDetail, FundDrawdownPanel, FundRollingPanel, OVERVIEW_ROWS, Provenance,
   RiskTable, RollingPanel, TAIL_ROWS, TrailingTable, Unavailable,
@@ -25,7 +25,7 @@ const TABS = [
   { key: "benchmark", label: "Benchmark Analysis" },
   { key: "manager", label: "Fund Manager", gated: "Needs fund manager history (no source identified)." },
   { key: "score", label: "Quant Score" },
-  { key: "ai", label: "AI Research", gated: "Built in Phase 7 on top of verified analytics." },
+  { key: "ai", label: "AI Research" },
 ] as const;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -87,6 +87,14 @@ export default async function FundPage({ params, searchParams }: { params: Promi
       <PillTabs active={tabKey} items={TABS.map((t) => ({ key: t.key, label: t.label, href: `/funds/${f.id}?tab=${t.key}`, muted: "gated" in t }))} />
 
       {"gated" in tab && <Banner tone="accent"><span><strong>{tab.label}</strong> is not available yet. {tab.gated}</span></Banner>}
+      {tabKey === "ai" && (
+        <Panel title="AI Research" description="Ask the research assistant about this fund. Answers come from the same verified calculations as this page, with the source and date of every figure.">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <Link href="/assistant" className={btnPrimary}>Open the assistant</Link>
+            <span className="text-muted">Try: “How risky is {f.name}?” (sign-in required)</span>
+          </div>
+        </Panel>
+      )}
       {tabKey === "overview" && <Overview f={f} />}
       {needsNav && (
         <div className="flex items-center justify-between gap-3">
