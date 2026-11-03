@@ -8,6 +8,7 @@ You need free accounts on **GitHub**, **Neon** (or Supabase), **Render** and **V
    gh auth login
    make deploy-data                  # uploads the 142 MB NAV bundle as release "data-latest"
    ```
+   No GitHub CLI? Run `scripts/publish_data.sh --files-only`, then on github.com open **Releases > Draft a new release**, create the tag `data-latest`, and attach `qsmf-data.tar.gz` and `qsmf-data.tar.gz.sha256`.
 2. **Create a free Neon database**, copy its connection string, then fill it:
    ```bash
    make deploy-db DST='postgresql://user:pass@ep-xxxx.neon.tech/neondb?sslmode=require'

@@ -19,9 +19,14 @@ lint:
 e2e:       ## browser tests; needs API on :8000 and `npm run build && npm run start` on :3000
 	cd frontend && npx playwright test
 
-deploy-db:    ## first-time hosted database: make deploy-db DST=postgresql://user:pass@host/db  (needs pg_dump and psql; local DB running)
+deploy-db:    ## first-time hosted database: make deploy-db DST='<DIRECT (not -pooler) postgresql:// url>'  (local DB must be running)
 	@test -n "$(DST)" || { echo "usage: make deploy-db DST=<neon/supabase url>"; exit 1; }
 	cd backend && QSMF_DATABASE_URL="$(DST)" ../$(PY) -m alembic upgrade head
-	SRC=postgresql://qsmf:qsmf@localhost:5433/qsmf DST="$(DST)" scripts/seed_remote_db.sh
+	@if command -v pg_dump >/dev/null && command -v psql >/dev/null; then \
+	  SRC=postgresql://qsmf:qsmf@localhost:5433/qsmf DST="$(DST)" scripts/seed_remote_db.sh; \
+	else \
+	  echo "pg_dump/psql not installed here; using the local Postgres container instead"; \
+	  docker compose exec -T -e SRC=postgresql://qsmf:qsmf@localhost:5432/qsmf -e DST="$(DST)" postgres bash -s < scripts/seed_remote_db.sh; \
+	fi
 deploy-data:  ## publish the NAV data bundle to the GitHub release Render downloads at build time (needs `gh auth login`)
 	scripts/publish_data.sh

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Landing } from "@/components/landing2/Landing";
+import { ApiStartingLoader } from "@/components/ui/ai-loader";
 import { api, type PlatformStats } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -17,6 +18,6 @@ async function LandingWithStats() {
 }
 
 export default function Home() {
-  // The statistics come from the API at request time; until they arrive the page shows an empty dark canvas (no placeholder figures).
-  return <Suspense fallback={<div aria-hidden className="min-h-screen bg-[#07090c]" />}><LandingWithStats /></Suspense>;
+  // The statistics come from the API at request time; until they arrive the page shows the loader (no placeholder figures).
+  return <Suspense fallback={<ApiStartingLoader />}><LandingWithStats /></Suspense>;
 }
